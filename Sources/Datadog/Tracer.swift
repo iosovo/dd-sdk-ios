@@ -23,6 +23,20 @@ public struct DDTags {
     internal static let errorStack   = "error.stack"
 }
 
+public struct DDTestingTags {
+    internal static let test            = "test"
+    internal static let testSuite       = "test.suite"
+    internal static let testName        = "test.name"
+    internal static let testCode        = "test.code"
+    internal static let testFramework   = "test.framework"
+    internal static let testTraits      = "test.traits"
+    internal static let testing         = "testing"
+    internal static let testStatus      = "test.status"
+
+    internal static let spanType        = "span.type"
+    internal static let logSource       = "source"
+}
+
 /// Because `Tracer` is a common name widely used across different projects, the `Datadog.Tracer` may conflict when
 /// doing `import Datadog`. In such case, following `DDTracer` typealias can be used to avoid compiler ambiguity.
 ///
