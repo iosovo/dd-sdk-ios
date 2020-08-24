@@ -7,8 +7,8 @@
 import UIKit
 
 internal class SendRUMFixture2ViewController: UIViewController {
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
 
         rumMonitor.startView(viewController: self)
 
@@ -17,7 +17,7 @@ internal class SendRUMFixture2ViewController: UIViewController {
         }
     }
 
-    override func viewWillDisappear(_ animated: Bool) {
+    override func viewDidDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
         rumMonitor.stopView(viewController: self)

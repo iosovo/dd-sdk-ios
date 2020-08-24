@@ -16,14 +16,14 @@ internal class SendRUMFixture1ViewController: UIViewController {
         pushNextScreenButton.isHidden = true
     }
 
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
 
         rumMonitor.startView(viewController: self)
     }
 
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
 
         rumMonitor.stopView(viewController: self)
     }

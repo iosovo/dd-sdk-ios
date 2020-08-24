@@ -61,11 +61,12 @@ public class RUMMonitor: DDRUMMonitor {
         label: "com.datadoghq.rum-monitor",
         target: .global(qos: .userInteractive)
     )
+    private let debugging: RUMDebugging?
 
     // MARK: - Initialization
 
     /// Initializes the Datadog RUM Monitor.
-    public static func initialize() -> DDRUMMonitor {
+    public static func initialize(debugRUMViews: Bool = false) -> DDRUMMonitor {
         do {
             if Global.rum is RUMMonitor {
                 throw ProgrammerError(
@@ -81,14 +82,14 @@ public class RUMMonitor: DDRUMMonitor {
                         : "`RUMMonitor.initialize()` produces a non-functional monitor, as the RUM feature is disabled."
                 )
             }
-            return RUMMonitor(rumFeature: rumFeature)
+            return RUMMonitor(rumFeature: rumFeature, debugRUMViews: debugRUMViews)
         } catch {
             consolePrint("\(error)")
             return DDNoopRUMMonitor()
         }
     }
 
-    internal convenience init(rumFeature: RUMFeature) {
+    internal convenience init(rumFeature: RUMFeature, debugRUMViews: Bool = false) {
         self.init(
             applicationScope: RUMApplicationScope(
                 rumApplicationID: rumFeature.configuration.applicationID,
@@ -106,17 +107,19 @@ public class RUMMonitor: DDRUMMonitor {
                 ),
                 samplingRate: rumFeature.configuration.sessionSamplingRate
             ),
-            dateProvider: rumFeature.dateProvider
+            dateProvider: rumFeature.dateProvider,
+            debugRUMViews: debugRUMViews
         )
     }
 
-    internal init(applicationScope: RUMApplicationScope, dateProvider: DateProvider) {
+    internal init(applicationScope: RUMApplicationScope, dateProvider: DateProvider, debugRUMViews: Bool = false) {
         self.applicationScope = applicationScope
         self.dateProvider = dateProvider
         self.contextProvider = RUMCurrentContext(
             applicationScope: applicationScope,
             queue: queue
         )
+        self.debugging = debugRUMViews ? RUMDebugging(applicationScope: applicationScope) : nil
     }
 
     // MARK: - Public DDRUMMonitor conformance
@@ -258,6 +261,7 @@ public class RUMMonitor: DDRUMMonitor {
     private func process(command: RUMCommand) {
         queue.async {
             _ = self.applicationScope.process(command: command)
+            self.debugging?.update()
         }
     }
 }
