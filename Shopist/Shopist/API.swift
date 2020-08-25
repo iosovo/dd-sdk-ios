@@ -8,6 +8,18 @@ import Foundation
 import Alamofire
 import Datadog
 
+internal func fakeError(onceIn upperRandomBound: UInt8) -> Error? {
+    assert(upperRandomBound != 0, "fakeError can be generated with non-zero positive numbers")
+    if UInt8.random(in: 0..<upperRandomBound) == 0 {
+        return NSError(
+            domain: "Network",
+            code: 999,
+            userInfo: [NSLocalizedDescriptionKey: "Request denied"]
+        )
+    }
+    return nil
+}
+
 internal struct Category: Decodable {
     let id: String
     let title: String
@@ -57,7 +69,7 @@ internal struct Payment: Encodable {
 
 internal final class API {
     // swiftlint:disable force_cast
-    private static let baseHost = (Bundle.main.object(forInfoDictionaryKey: "ShopistBaseURL") as! String)
+    static let baseHost = Bundle.main.object(forInfoDictionaryKey: "ShopistBaseURL") as! String
     // swiftlint:enable force_cast
     private static let baseURL = "https://" + baseHost
     private static let apiURL = "https://api." + baseHost
@@ -107,21 +119,60 @@ internal final class API {
         let httpMethod = RUMHTTPMethod(rawValue: request.httpMethod!)!
         // swiftlint:enable force_unwrapping
         rum?.startResourceLoading(resourceName: resourceName, url: url, httpMethod: httpMethod)
-        httpClient.request(request).validate().response { response in
-            let statusCode = response.response?.statusCode
-            if let someError = response.error {
+
+        let tracer = Global.sharedTracer
+        let span = tracer.startSpan(operationName: request.url?.path ?? "network request").setActive()
+        let headerWriter = HTTPHeadersWriter()
+        headerWriter.inject(spanContext: span.context)
+        var tracedRequest = request
+        headerWriter.tracePropagationHTTPHeaders.forEach { tracedRequest.setValue($1, forHTTPHeaderField: $0) }
+
+        httpClient.request(tracedRequest).validate().response { result in
+            let statusCode = result.response?.statusCode
+            span.setTag(key: OTTags.httpStatusCode, value: statusCode)
+            if let someError = (result.error ?? fakeError(onceIn: 50)) {
+                span.handleError(someError)
                 rum?.stopResourceLoadingWithError(resourceName: resourceName, error: someError, source: .network, httpStatusCode: statusCode)
                 completion(.failure(someError))
-            } else if let someData = response.data {
-                rum?.stopResourceLoading(resourceName: resourceName, kind: .fetch, httpStatusCode: statusCode)
+            } else if let someData = result.data {
+                rum?.stopResourceLoading(
+                    resourceName: resourceName,
+                    kind: .fetch,
+                    httpStatusCode: statusCode,
+                    size: UInt64(someData.count)
+                )
+                let decodingSpan = tracer.startSpan(operationName: "decoding response data")
+                decodingSpan.setTag(key: "data_size_in_bytes", value: someData.count)
+                let completionResult: Result<T, Error>
                 do {
+                    Thread.sleep(for: .short)
                     let decoded = try self.jsonDecoder.decode(T.self, from: someData)
-                    completion(.success(decoded))
+                    completionResult = .success(decoded)
                 } catch {
-                    completion(.failure(error))
+                    decodingSpan.handleError(error)
+                    completionResult = .failure(error)
                 }
+                decodingSpan.finish()
+                completion(completionResult)
             }
+            span.finish()
         }
+    }
+}
+
+private extension OTSpan {
+    func handleError(_ error: Error) {
+        let nsError = error as NSError
+        let errorStack = String(describing: error)
+        let errorMessage = nsError.localizedDescription
+        let errorKind = "\(nsError.domain) - \(nsError.code)"
+        let logs: [String: Encodable] = [
+            OTLogFields.event: "error",
+            OTLogFields.errorKind: errorKind,
+            OTLogFields.message: errorMessage,
+            OTLogFields.stack: errorStack,
+        ]
+        self.log(fields: logs)
     }
 }
 
