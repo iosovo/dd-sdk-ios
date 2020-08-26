@@ -160,7 +160,12 @@ internal class RUMViewOutline: RUMDebugView {
     }
 
     override func layoutSubviews() {
-        let safeAreaBounds = bounds.inset(by: safeAreaInsets)
+        let safeAreaBounds: CGRect
+        if #available(iOS 11, *) {
+            safeAreaBounds = bounds.inset(by: safeAreaInsets)
+        } else {
+            safeAreaBounds = bounds.inset(by: UIEdgeInsets(top: -44, left: 0, bottom: 0, right: 0))
+        }
         label.frame = .init(
             x: bounds.minX,
             y: safeAreaBounds.maxY - stackOffset - Constants.labelHeight,
