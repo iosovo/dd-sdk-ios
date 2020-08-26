@@ -35,7 +35,13 @@ internal class UploadURLProvider {
 
     var url: URL {
         var urlComponents = URLComponents(url: urlWithClientToken, resolvingAgainstBaseURL: false)
-        urlComponents?.percentEncodedQueryItems = queryItemProviders.map { $0.value() }
+        if #available(iOS 11.0, *) {
+            urlComponents?.percentEncodedQueryItems = queryItemProviders.map { $0.value() }
+        } else {
+            userLogger.error("🔥 Failed to create URL from \(urlWithClientToken) with \(queryItemProviders)")
+            developerLogger?.error("🔥 Failed to create URL from \(urlWithClientToken) with \(queryItemProviders)")
+            return urlWithClientToken
+        }
 
         guard let url = urlComponents?.url else {
             userLogger.error("🔥 Failed to create URL from \(urlWithClientToken) with \(queryItemProviders)")
