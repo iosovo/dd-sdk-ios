@@ -11,7 +11,18 @@ import UIKit
 /// `DDRUMMonitor` allows you to record User events that can be explored and analyzed in Datadog Dashboards.
 /// You can only have one active `RUMMonitor`, and should register/retrieve it from the `Global` object.
 public class DDRUMMonitor {
-    // MARK: - Public
+    // MARK: - Public properties
+
+    /// Global attributes to be injected into every command
+    public var attributes: [AttributeKey: AttributeValue] { [:] }
+
+    /// Sets a global attribute to be injected into every command
+    /// - Parameters:
+    ///   - key: key of the global attribute. If key already exists, new value replaces old value
+    ///   - value: attribute value. If nil, key is removed from global attributes
+    public func setAttribute(forKey key: AttributeKey, value: AttributeValue?) { }
+
+    // MARK: - Public methods
 
     /// Notifies that the View starts being presented to the user.
     /// - Parameters:
