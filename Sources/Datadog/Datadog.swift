@@ -72,9 +72,13 @@ public class Datadog {
     internal static var instance: Datadog?
 
     internal let userInfoProvider: UserInfoProvider
+    
+    public static var isAlreadyInitialized: Bool {
+        return Datadog.instance != nil
+    }
 
     private static func initializeOrThrow(appContext: AppContext, configuration: Configuration) throws {
-        guard Datadog.instance == nil else {
+        guard !isAlreadyInitialized else {
             throw ProgrammerError(description: "SDK is already initialized.")
         }
         let validConfiguration = try ValidConfiguration(
@@ -169,7 +173,7 @@ public class Datadog {
 
     /// Internal feature made only for tests purpose.
     static func deinitializeOrThrow() throws {
-        guard Datadog.instance != nil else {
+        guard isAlreadyInitialized else {
             throw ProgrammerError(description: "Attempted to stop SDK before it was initialized.")
         }
 

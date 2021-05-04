@@ -27,6 +27,12 @@ internal class UploadURLProvider {
             let queryItem = URLQueryItem(name: "ddsource", value: Datadog.Constants.ddsource)
             return QueryItemProvider { queryItem }
         }
+        
+        /// Creates `ddtags=tag1,tag2,...` query item.
+        static func ddtags(tags: [String]) -> QueryItemProvider {
+            let queryItem = URLQueryItem(name: "ddtags", value: tags.joined(separator: ","))
+            return QueryItemProvider { queryItem }
+        }
 
         private init(value: @escaping () -> URLQueryItem) {
             self.value = value
@@ -35,17 +41,13 @@ internal class UploadURLProvider {
 
     var url: URL {
         var urlComponents = URLComponents(url: urlWithClientToken, resolvingAgainstBaseURL: false)
-        if #available(iOS 11.0, *) {
-            urlComponents?.percentEncodedQueryItems = queryItemProviders.map { $0.value() }
-        } else {
-            userLogger.error("🔥 Failed to create URL from \(urlWithClientToken) with \(queryItemProviders)")
-            developerLogger?.error("🔥 Failed to create URL from \(urlWithClientToken) with \(queryItemProviders)")
-            return urlWithClientToken
+
+        if !queryItemProviders.isEmpty {
+            urlComponents?.queryItems = queryItemProviders.map { $0.value() }
         }
 
         guard let url = urlComponents?.url else {
             userLogger.error("🔥 Failed to create URL from \(urlWithClientToken) with \(queryItemProviders)")
-            developerLogger?.error("🔥 Failed to create URL from \(urlWithClientToken) with \(queryItemProviders)")
             return urlWithClientToken
         }
         return url
